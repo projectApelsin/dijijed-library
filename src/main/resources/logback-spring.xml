@@ -1,6 +1,6 @@
 <configuration>
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>${NGROK_LOGSTASH_URL}</destination>
+        <destination>https://095d-176-119-114-254.ngrok-free.app</destination>
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp/>
