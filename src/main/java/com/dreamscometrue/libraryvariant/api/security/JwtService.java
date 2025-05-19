@@ -1,7 +1,9 @@
 package com.dreamscometrue.libraryvariant.api.security;
 
+import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -9,10 +11,12 @@ import java.util.Date;
 
 @Component
 public class JwtService {
-    private final String jwtSecret = "revenkoAi224blalblalbalshabudibidybidamoyarabotaprostadayaochenstarays" +
-            "yasdelatsekretniykey123adsd13451015201230asdfjnj4ASDF4fsd";
-    private final long accessExpirationMs = 15 * 60 * 1000; // 15 хвилин
-    private final long refreshExpirationMs = 7 * 24 * 60 * 60 * 1000; // 7 днів
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+    @Value("${jwt.accessExpirationMs}")
+    private long accessExpirationMs; // 15 хвилин
+    @Value("${jwt.refreshExpirationMs}")
+    private long refreshExpirationMs; // 7 днів
 
     public String generateAccessToken(String username) {
         return Jwts.builder()
