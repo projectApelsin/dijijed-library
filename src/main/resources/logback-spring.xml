@@ -1,6 +1,13 @@
 <configuration>
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
-        <destination>tcp://5.tcp.eu.ngrok.io:17017</destination>
+        <!-- Используйте формат hostname:port без tcp:// -->
+        <destination>5.tcp.eu.ngrok.io:17017</destination>
+
+        <!-- Дополнительные полезные настройки -->
+        <reconnectionDelay>1 second</reconnectionDelay>
+        <connectionTimeout>5 seconds</connectionTimeout>
+        <keepAliveDuration>5 minutes</keepAliveDuration>
+
         <encoder class="net.logstash.logback.encoder.LoggingEventCompositeJsonEncoder">
             <providers>
                 <timestamp/>
@@ -19,7 +26,15 @@
         </encoder>
     </appender>
 
+    <!-- Консольный аппендер для отладки -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="LOGSTASH"/>
+        <appender-ref ref="CONSOLE"/>
     </root>
 </configuration>
