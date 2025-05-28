@@ -1,5 +1,6 @@
 package com.dreamscometrue.libraryvariant.service;
 
+import com.dreamscometrue.libraryvariant.dto.UserDTO;
 import com.dreamscometrue.libraryvariant.model.UserClient;
 import com.dreamscometrue.libraryvariant.model.repository.UserClientRepository;
 
@@ -28,11 +29,14 @@ public class UserService implements UserDetailsService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    public void register(String username, String password) {
+    public UserDTO register(String username, String password) {
         UserClient userClient = new UserClient();
         userClient.setUsername(username);
         userClient.setPassword(passwordEncoder.encode(password));
         userClientRepository.save(userClient);
+        UserDTO userDTO = new UserDTO();
+        userDTO.setUsername(username);
+        return userDTO;
     }
 
     @Override

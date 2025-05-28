@@ -8,7 +8,9 @@ import com.dreamscometrue.libraryvariant.model.UserClient;
 import com.dreamscometrue.libraryvariant.model.repository.UserClientRepository;
 import com.dreamscometrue.libraryvariant.service.UserService;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -20,9 +22,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.ModelAndView;
@@ -37,7 +41,6 @@ public class AuthController {
     private final UserService userService;
     private final UserClientRepository userClientRepository;
     private final JwtService jwtService;
-    private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
 
     @Autowired
@@ -45,85 +48,66 @@ public class AuthController {
             UserService userService,
             UserClientRepository userClientRepository,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager
     ) {
         this.userService = userService;
         this.userClientRepository = userClientRepository;
         this.jwtService = jwtService;
-        this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
     }
+
+    // =============== WEB ENDPOINTS (Session-based) ===============
 
     @PostMapping("/register")
     public ModelAndView registerUser(
             @RequestParam String username,
             @RequestParam String password
     ) {
-        System.out.println(username);
-        System.out.println(password);
-        userService.register(username, password);
-        return new ModelAndView("login"); // перенаправление после успешной регистрации
+        try {
+            userService.register(username, password);
+            return new ModelAndView("login", Map.of("success", "Registration successful! Please login."));
+        } catch (Exception e) {
+            return new ModelAndView("register", Map.of("error", "Registration failed: " + e.getMessage()));
+        }
     }
 
-    @PostMapping("/token")
-    public ResponseEntity<?> generateToken(Authentication authentication) {
-        String jwt = jwtService.generateAccessToken(authentication.getName());
-        return ResponseEntity.ok(Map.of("token", jwt));
-    }
     @PostMapping("/login")
     public ModelAndView loginWithForm(
             @RequestParam String username,
             @RequestParam String password,
+            HttpServletRequest request,
             HttpServletResponse response
     ) {
         try {
-            authenticationManager.authenticate(
+            Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(username, password)
             );
+
+            // Встановлюємо аутентифікацію в SecurityContext
+            SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+            securityContext.setAuthentication(authentication);
+            SecurityContextHolder.setContext(securityContext);
+
+            // Зберігаємо SecurityContext в сесії
+            HttpSession session = request.getSession(true);
+            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
+
+            return new ModelAndView("redirect:/home");
+
         } catch (BadCredentialsException ex) {
             return new ModelAndView("login", Map.of("error", "Invalid credentials"));
         }
-
-        String accessToken = jwtService.generateAccessToken(username);
-        String refreshToken = jwtService.generateRefreshToken(username);
-
-        Cookie accessCookie = new Cookie("accessToken", accessToken);
-        accessCookie.setHttpOnly(true);
-        accessCookie.setPath("/");
-        accessCookie.setMaxAge(60 * 15); // 15 минут
-
-        Cookie refreshCookie = new Cookie("refreshToken", refreshToken);
-        refreshCookie.setHttpOnly(true);
-        refreshCookie.setPath("/");
-        refreshCookie.setMaxAge(60 * 60 * 24 * 7); // 7 дней
-
-        response.addCookie(accessCookie);
-        response.addCookie(refreshCookie);
-
-        return new ModelAndView("redirect:/home");
     }
 
-
-    @PostMapping("/refresh")
-    public ResponseEntity<?> refreshUser(
-            @CookieValue(name = "refreshToken", required = false) String refreshToken
-    ) {
-        if (refreshToken == null || !jwtService.validateToken(refreshToken)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token");
+    @PostMapping("/logout")
+    public ModelAndView logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
         }
-        String username = jwtService.extractUsername(refreshToken);
-
-        // Генерируем новый access токен
-        String newAccessToken = jwtService.generateAccessToken(username);
-
-        Map<String, String> response = new HashMap<>();
-        response.put("accessToken", newAccessToken);
-
-        return ResponseEntity.ok(response);
+        SecurityContextHolder.clearContext();
+        return new ModelAndView("redirect:/auth/login");
     }
-
-
 
     @GetMapping("/login")
     public ModelAndView login() {
