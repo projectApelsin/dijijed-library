@@ -118,7 +118,6 @@ public class ApiAuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletResponse response) {
-        // Очищаємо cookies
         Cookie accessCookie = new Cookie("accessToken", "");
         accessCookie.setHttpOnly(true);
         accessCookie.setPath("/");

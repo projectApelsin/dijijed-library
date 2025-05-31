@@ -56,7 +56,6 @@ public class AuthController {
         this.authenticationManager = authenticationManager;
     }
 
-    // =============== WEB ENDPOINTS (Session-based) ===============
 
     @PostMapping("/register")
     public ModelAndView registerUser(
@@ -83,12 +82,10 @@ public class AuthController {
                     new UsernamePasswordAuthenticationToken(username, password)
             );
 
-            // Встановлюємо аутентифікацію в SecurityContext
             SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
             securityContext.setAuthentication(authentication);
             SecurityContextHolder.setContext(securityContext);
 
-            // Зберігаємо SecurityContext в сесії
             HttpSession session = request.getSession(true);
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, securityContext);
 
